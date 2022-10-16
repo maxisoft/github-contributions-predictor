@@ -1,6 +1,10 @@
 name: Python Package using Conda
 
-on: [push]
+on:
+  push:
+    branch:
+      - main
+      - dev
 
 jobs:
   build-linux:
@@ -10,6 +14,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Download required ml files
+      run: |
+        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/model.pth -O model.pth
+        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/scalers.pkl.z -O scalers.pkl.z
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
@@ -31,3 +39,10 @@ jobs:
         conda run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         conda run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Predict
+      run: |
+        conda run python 4-inference.py
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_ACTOR: ${{ github.repository_owner }}
