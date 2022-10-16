@@ -76,9 +76,9 @@ jobs:
       - name: prepare pred_history branch
         run: |
           git fetch --all
-          git switch --orphan pred_history
-          git branch --set-upstream-to=origin/pred_history pred_history && \
-          git pull --stat || :
+          git switch pred_history || git switch --orphan pred_history
+          git branch --set-upstream-to=origin/pred_history pred_history && 
+          git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history || :
       - name: download preds artifact
         uses: actions/download-artifact@v2
         with:
