@@ -20,8 +20,8 @@ jobs:
     - uses: actions/checkout@v3
     - run: |
         wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
-        mkdir -p out &&
-        unzip /tmp/pred_history.zip -d out &&
+        unzip /tmp/pred_history.zip &&
+        ln -s $PWD/github-activity-predictor-pred_history $PWD/out
         ls -lah out || :
     - name: Download required ml files
       run: |
