@@ -57,7 +57,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
         GITHUB_ACTOR: ${{ github.repository_owner }}
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       name: Collect Artifacts
       with:
         name: preds
