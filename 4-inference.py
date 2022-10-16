@@ -146,6 +146,7 @@ async def amain(users=_default_users):
         contributions: dict[str, object] = await gather_data.get_contributions(users)
         with Path('contribs.json').open('w') as f:
             json.dump(contributions, f)
+            print(contributions)
 
         reorder_indices = np.arange(len(contributions), dtype=np.int64)
         user_data: Dict[str, UserDataValue] = {gather_data.hash_user_name(user): UserDataValue(i, user) for
