@@ -4,7 +4,6 @@ import joblib
 import numpy as np
 import pandas as pd
 import scipy.stats
-from pandas_profiling import ProfileReport
 from sklearn.preprocessing import PowerTransformer, RobustScaler
 
 
@@ -143,6 +142,7 @@ def main(report=True, inference=False, user_transformer=None, week_transformer=N
 
     joblib.dump({'user_scaler': transformer, 'weeks_scaler': w_transformer}, 'scalers.pkl.z')
     if report:
+        from pandas_profiling import ProfileReport
         profile = ProfileReport(user_df, interactions={'targets': [], 'continuous': False},
                             plot={'histogram': {'bins': 16}})
         profile.to_file("userdata_report.html")
