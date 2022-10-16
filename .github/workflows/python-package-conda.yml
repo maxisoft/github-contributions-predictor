@@ -48,3 +48,45 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
         GITHUB_ACTOR: ${{ github.repository_owner }}
+
+    - uses: actions/upload-artifact@v2
+      name: Collect Artifacts
+      with:
+        name: preds
+        path: |
+          out/*
+
+  push:
+    needs: predict
+    runs-on: ubuntu-latest
+    permissions: write-all
+    strategy:
+      max-parallel: 1
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          git switch --orphan pred_history
+          git pull --no-ff --stat --allow-unrelated-histories
+      - uses: actions/download-artifact@v2
+        with:
+          name: preds
+
+      - run: ls -lah
+      - run: |
+          set -eu
+          git add -A *
+          if ! git diff --cached --quiet; then
+            if ! git config --get user.email > /dev/null; then
+                git config --local user.email "${{ github.repository_owner }}@users.noreply.github.com"
+            fi
+            if ! git config --get user.name > /dev/null; then
+                git config --local user.name "${{ github.repository_owner }}"
+            fi
+            git commit -m "Automatic commit for latest predictions"
+            git push
+          fi
+
+
+
+
