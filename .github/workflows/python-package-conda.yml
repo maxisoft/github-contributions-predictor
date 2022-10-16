@@ -22,6 +22,7 @@ jobs:
       run: |
         conda install pip
         conda install pytorch cpuonly -c pytorch
+        conda install numpy pandas scipy scikit-learn tqdm
         pip install -r requirements.txt
     - name: Lint with flake8
       run: |
