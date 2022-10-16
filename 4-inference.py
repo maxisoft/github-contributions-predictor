@@ -194,7 +194,7 @@ async def amain(users=_default_users):
                 df = pd.DataFrame(columns=['date', 'contrib_count'])
                 df.set_index('date', inplace=True)
 
-            new_df = pd.DataFrame(contribs[i, :, :].numpy().transpose(), index=date_array, columns=['contrib_count'])
+            new_df = pd.DataFrame(np.round(contribs[i, :, :].numpy().transpose()), index=date_array, columns=['contrib_count'])
             df = df.append(new_df)
             df = df[~df.index.duplicated(keep='last')] # remove duplicate if any
             df.sort_index(inplace=True)
