@@ -9,8 +9,9 @@ on:
 permissions: read-all
 
 jobs:
-  build-linux:
+  predict:
     runs-on: ubuntu-latest
+    permissions: write-all
     strategy:
       max-parallel: 5
 
