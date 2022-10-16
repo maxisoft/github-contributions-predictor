@@ -5,6 +5,8 @@ on:
     branch:
       - main
       - dev
+  schedule:
+    - cron: '0 */2 * * *'
 
 permissions: read-all
 
@@ -73,7 +75,7 @@ jobs:
       - run: |
           git switch --orphan pred_history
           git branch --set-upstream-to=origin/pred_history pred_history && \
-          git pull --no-ff --stat --allow-unrelated-histories || :
+          git pull --stat || :
       - uses: actions/download-artifact@v2
         with:
           name: preds
