@@ -58,25 +58,23 @@ def pack_data(out='userdata', align_weekday=True):
             if len(weeks) < contributions_buffer.shape[1] // 7:
                 log.warning("%s doesn't have enough contribution %d", user, len(weeks))
                 continue
-            if align_weekday:
-                for week in weeks[-contributions_buffer.shape[1] // 7: -1]:
-                    for weekday, day in enumerate(week['contributionDays']):
-                        assert weekday == day['weekday']
-                        contributions_buffer[c, contribution_counter] = min(max(day['contributionCount'], 0),
-                                                                                      2 ** 16)
-                        contribution_counter += 1
-                    assert weekday == 6, f"{weekday}"
 
-            else:
-                for week in weeks[-contributions_buffer.shape[1] // 7:]:
-                    for weekday, day in enumerate(week['contributionDays']):
-                        contributions_buffer[c, contribution_counter] = min(max(day['contributionCount'], 0),
-                                                                                      2 ** 16)
-                        contribution_counter += 1
-                    assert weekday == 6, f"{weekday}"
+            for week in weeks[-contributions_buffer.shape[1] // 7:]:
+                for weekday, day in enumerate(week['contributionDays']):
+                    assert weekday == day['weekday']
+                    contributions_buffer[c, contribution_counter] = min(max(day['contributionCount'], 0),
+                                                                                  2 ** 16)
+                    contribution_counter += 1
+                assert not align_weekday or weekday == 6, f"{weekday}"
+                if not align_weekday and weekday != 6:
+                    break
 
-                if contribution_counter < contributions_buffer.shape[1]:
-                    contributions_buffer[c, :] = np.roll(contributions_buffer[c, :], (contributions_buffer.shape[1] - contribution_counter) // 7 * 7)
+            if contribution_counter < contributions_buffer.shape[1]:
+                shift = (contributions_buffer.shape[1] - contribution_counter)
+                if align_weekday:
+                    shift //= 7
+                    shift *= 7
+                contributions_buffer[c, :] = np.roll(contributions_buffer[c, :], shift)
 
             c += 1
 
