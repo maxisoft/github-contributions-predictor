@@ -80,7 +80,7 @@ jobs:
           git branch --set-upstream-to=origin/pred_history pred_history && 
           git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history || :
       - name: download preds artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: preds
 
