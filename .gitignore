@@ -775,3 +775,12 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+/contribs.json
+/contribs.7z
+/ml.npz
+/model.pth
+/scalers.pkl.z
+/tmp.mm
+/*.npz
+/userdata_report.html
+/users.json
