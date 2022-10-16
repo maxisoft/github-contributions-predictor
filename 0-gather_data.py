@@ -26,6 +26,9 @@ def github_actor() -> str:
     return res
 
 
+def hash_user_name(user: str) -> str:
+    return hashlib.blake2b(user.encode('utf8'), digest_size=16, salt=b'maxisoft').hexdigest()
+
 async def build_user_list(follower=True, following=True, *args, limit=1000):
     actor = github_actor()
     async with httpx.AsyncClient(headers={'Accept': 'application/vnd.github+json'},
@@ -197,9 +200,8 @@ async def get_contributions(users: list[str]) -> dict[str, object]:
                 pbar.update()
                 pbar.set_description_str(user)
 
-                user_hash = hashlib.blake2b(user.encode('utf8'), digest_size=16, salt=b'maxisoft')
                 try:
-                    return user_hash.hexdigest(), r.json()
+                    return hash_user_name(user), r.json()
                 except json.decoder.JSONDecodeError:
                     return None, None
 
