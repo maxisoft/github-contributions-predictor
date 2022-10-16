@@ -147,7 +147,7 @@ async def amain(users=_default_users):
         with Path('contribs.json').open('w') as f:
             json.dump(contributions, f)
 
-        reorder_indices = np.arange(len(contributions), dtype=np.long)
+        reorder_indices = np.arange(len(contributions), dtype=np.int64)
         user_data: Dict[str, UserDataValue] = {gather_data.hash_user_name(user): UserDataValue(i, user) for
                                                i, user in enumerate(users)}
         for i, user_hash in enumerate(contributions.keys()):
@@ -167,8 +167,6 @@ async def amain(users=_default_users):
             weeks = data['scaled_weeks']
         now = datetime.datetime.utcnow()
         weekday = now.weekday()
-        # weekday += 1
-        # weekday %= 7
         weeks = weeks[:, :-1]
 
         day = abs((weekday + 1) % 7)
@@ -210,3 +208,4 @@ if __name__ == '__main__':
         asyncio.run(amain())
     except:
         logger.error("", exc_info=True)
+        raise
