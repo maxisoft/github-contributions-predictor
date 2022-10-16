@@ -72,17 +72,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: |
+      - name: prepare pred_history branch
+        run: |
+          git fetch --all
           git switch --orphan pred_history
           git branch --set-upstream-to=origin/pred_history pred_history && \
           git pull --stat || :
-      - uses: actions/download-artifact@v2
+      - name: download preds artifact
+        uses: actions/download-artifact@v2
         with:
           name: preds
 
-      - run: ls -lah
-      - run: |
+      - name: Push to remote
+        run: |
           set -eu
+          ls -lah
           git add -A *
           if ! git diff --cached --quiet; then
             if ! git config --get user.email > /dev/null; then
