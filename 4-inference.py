@@ -25,6 +25,44 @@ pack_data = importlib.import_module('1-pack-data')
 preprocess = importlib.import_module('2-preprocess')
 
 
+class SwitchableNorm1d(nn.Module):
+    """Simplification over https://arxiv.org/abs/1907.10473
+    by using only batchnorm and layernorm.
+    Allowing the layer to work with both conv data shape (N, C, H) and linear shape (N, *, F)
+    """
+
+    def __init__(self, num_features, normalized_shape=None, weight_shape=None, momentum=0.1, bias=True):
+        super().__init__()
+        if normalized_shape is None:
+            normalized_shape = num_features
+        self.bn = nn.BatchNorm1d(num_features, momentum=momentum)
+        self.ln = nn.LayerNorm(normalized_shape)
+        if weight_shape is None:
+            weight_shape = normalized_shape
+            if isinstance(normalized_shape, int) or len(normalized_shape) == 1:
+                weight_shape = (num_features,)
+        self.weight = nn.Parameter(torch.empty(weight_shape))
+        torch.nn.init.normal_(self.weight, 0, 0.7)
+        if bias:
+            self.bias = nn.Parameter(torch.zeros(weight_shape))
+        else:
+            self.bias = None
+
+    def forward(self, input: Tensor):
+        bn = self.bn(input)
+        ln = self.ln(input)
+        weight = self.weight.sigmoid()
+        if weight.dim() < input.dim() and weight.size(-1) != input.size(-1):
+            # assuming to work with convolution shape (N, C, H, *)
+            pad = tuple(1 for _ in range(input.dim() - 1 - weight.dim()))
+            weight = weight.view(1, *weight.shape, *pad)
+            assert weight.dim() == input.dim()
+        res = weight * bn + (1 - weight) * ln
+        if self.bias is not None:
+            res = res + self.bias
+        return res
+
+
 class GCModel(nn.Module):
     def __init__(self, seq_size: int, user_features: int):
         super().__init__()
@@ -42,22 +80,22 @@ class GCModel(nn.Module):
         self.hidden_alpha = nn.Parameter(torch.empty((7, user_features), dtype=torch.cfloat))
         torch.nn.init.kaiming_normal_(self.hidden_alpha)
 
-        self.user_bn = nn.BatchNorm1d(user_features)
+        self.user_bn = SwitchableNorm1d(user_features, momentum=0.01)
 
         self.hidden = nn.Sequential(
             nn.Conv1d(user_features, hidden_size, 1),
             nn.Mish(inplace=True),
             nn.Conv1d(hidden_size, hidden_size, 7, 7),
-            nn.GroupNorm(8, hidden_size),
+            SwitchableNorm1d(hidden_size, seq_size // 7, (hidden_size, 1)),
             nn.Mish(inplace=True),
             nn.Conv1d(hidden_size, user_features, 3)
         )
 
         self.final = nn.Sequential(
-            nn.BatchNorm1d(7 * user_features),
+            SwitchableNorm1d(7 * user_features, momentum=0.01),
             nn.Linear(7 * user_features, hidden_size),
             nn.Mish(inplace=True),
-            nn.Dropout(0.2),
+            nn.Dropout(0.1),
             nn.Linear(hidden_size, 7 * 6 * 2, bias=True)
         )
 
@@ -97,7 +135,6 @@ class GCModel(nn.Module):
 
         users = self.user_bn(users)
         if self.training:
-            # noise = torch.randn_like(users)
             users_std = torch.std(users, dim=0, keepdim=True).expand_as(users)
             noise = torch.normal(0, users_std).to(device=users.device)
             users = users + noise.detach() * torch.randint_like(noise, 0, 5) / 100
@@ -108,14 +145,16 @@ class GCModel(nn.Module):
         contribs_x = contrib_alpha * torch.amax(torch.abs(contribs_x), dim=3) + (1 - contrib_alpha) * torch.mean(
             contribs_x, dim=3)
         acontribs_x = torch.abs(contribs_x)
-        contribs_x = contribs_x * (acontribs_x > torch.quantile(acontribs_x, 0.1, dim=2, keepdim=True))
+        contribs_x = contribs_x * (
+                    acontribs_x > torch.quantile(acontribs_x, 0.1, dim=1, keepdim=True))  # mimic fft filters
+        contribs_x = contribs_x * (acontribs_x > torch.quantile(acontribs_x, 0.1, dim=2, keepdim=True))  # on both axis
         contribs_x = torch.fft.ifft2(contribs_x, dim=(1, 2), norm='ortho')
         hidden = self.hidden(contribs_x.real.permute(0, 2, 1)).permute(0, 2, 1)
         hidden_alpha = self.hidden_alpha.tanh()
-        hidden = torch.fft.fft2(hidden, dim=(2, 1)) * hidden_alpha + torch.fft.fft(contribs_x[:, -hidden.size(1):, :],
-                                                                                   dim=1) * (1 - hidden_alpha)
+        hidden = (torch.fft.fft2(hidden, dim=(2, 1)) * hidden_alpha +
+                  torch.fft.fft(contribs_x[:, -hidden.size(1):, :], dim=1) * (1 - hidden_alpha))
         ahidden = torch.abs(hidden)
-        hidden = hidden * (ahidden > torch.quantile(ahidden, 0.1, dim=1, keepdim=True))  # mimic fft filters
+        hidden = hidden * (ahidden > torch.quantile(ahidden, 0.3, dim=2, keepdim=True))
         hidden = torch.fft.ifft(hidden, dim=1)
         res = self.final(hidden.real.reshape(hidden.size(0), -1)).view(hidden.size(0), 6, 7, 2)
         return res
