@@ -97,7 +97,7 @@ class GCModel(nn.Module):
 
         users = self.user_bn(users)
         if self.training:
-            noise = torch.randn_like(users)
+            # noise = torch.randn_like(users)
             users_std = torch.std(users, dim=0, keepdim=True).expand_as(users)
             noise = torch.normal(0, users_std).to(device=users.device)
             users = users + noise.detach() * torch.randint_like(noise, 0, 5) / 100
