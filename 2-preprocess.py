@@ -32,6 +32,8 @@ def remove_outlier(df: pd.DataFrame):
     mask &= quantile_mask(df['totalContributions'].values, 0.2, 0.8)
     mask &= df['totalContributions'].values > 0
     mask &= quantile_mask(df['contrib_skew'].values)
+    mask &= quantile_mask(df['repositoriesContributedTo'].values, 0.2)
+    mask &= df['repositoriesContributedTo'].values > 1
 
     return df.loc[mask], mask
 
