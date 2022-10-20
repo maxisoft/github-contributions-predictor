@@ -14,11 +14,14 @@ jobs:
   predict:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      max-parallel: 2
+      matrix:
+        model: [no_scaling, with_scaling]
 
     steps:
     - uses: actions/checkout@v3
     - run: |
+        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history_${{ matrix.model }}.zip -O /tmp/pred_history.zip ||
         wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
         unzip /tmp/pred_history.zip -d /tmp &&
         mkdir -p out &&
@@ -26,7 +29,7 @@ jobs:
         ls -lah out || :
     - name: Download required ml files
       run: |
-        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/model.pth -O model.pth
+        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
         wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/scalers.pkl.z -O scalers.pkl.z
     - name: Add conda to system path
       run: |
@@ -60,7 +63,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       name: Collect Artifacts
       with:
-        name: preds
+        name: preds_${{ matrix.model }}
         path: |
           out/*
 
@@ -70,19 +73,21 @@ jobs:
     permissions: write-all
     strategy:
       max-parallel: 1
+      matrix:
+        model: [ no_scaling, with_scaling ]
 
     steps:
       - uses: actions/checkout@v3
       - name: prepare pred_history branch
         run: |
           git fetch --all
-          git switch pred_history || git switch --orphan pred_history
-          git branch --set-upstream-to=origin/pred_history pred_history && 
-          git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history || :
+          git switch pred_history_${{ matrix.model }} || git switch --orphan pred_history_${{ matrix.model }}
+          git branch --set-upstream-to=origin/pred_history_${{ matrix.model }} pred_history_${{ matrix.model }} && 
+          git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history_${{ matrix.model }} || :
       - name: download preds artifact
         uses: actions/download-artifact@v3
         with:
-          name: preds
+          name: preds_${{ matrix.model }}
 
       - name: Push to remote
         run: |
@@ -96,8 +101,8 @@ jobs:
             if ! git config --get user.name > /dev/null; then
                 git config --local user.name "${{ github.repository_owner }}"
             fi
-            git commit -m "Automatic commit for latest predictions"
-            git push --set-upstream origin pred_history
+            git commit -m "Automatic commit for latest predictions with ${{ matrix.model }}"
+            git push --set-upstream origin pred_history_${{ matrix.model }}
           fi
 
 
