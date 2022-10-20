@@ -65,7 +65,6 @@ def pack_data(out='userdata', align_weekday=True):
                     contributions_buffer[c, contribution_counter] = min(max(day['contributionCount'], 0),
                                                                                   2 ** 16)
                     contribution_counter += 1
-                assert not align_weekday or weekday == 6, f"{weekday}"
                 if not align_weekday and weekday != 6:
                     break
 
@@ -76,7 +75,8 @@ def pack_data(out='userdata', align_weekday=True):
                     shift *= 7
                 contributions_buffer[c, :] = np.roll(contributions_buffer[c, :], shift)
 
-            c += 1
+            if contribution_counter > contributions_buffer.shape[1] // 2:
+                c += 1
 
         user_df = pd.DataFrame(user_buffer[:c, :], index=user_indices[:c], columns=user_columns)
         #print(user_df)
