@@ -20,13 +20,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - run: |
-        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history_${{ matrix.model }}.zip -O /tmp/pred_history.zip ||
-        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
-        unzip /tmp/pred_history.zip -d /tmp &&
-        mkdir -p out &&
-        cp --archive /tmp/github-activity-predictor-pred_history/* out &&
-        ls -lah out || :
     - name: Download required ml files
       run: |
         wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
@@ -52,6 +45,15 @@ jobs:
         conda run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         conda run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Download previous predictions
+      run: |
+        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history_${{ matrix.model }}.zip -O /tmp/pred_history.zip ||
+        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
+        unzip /tmp/pred_history.zip -d /tmp &&
+        mkdir -p out &&
+        cp --archive /tmp/github-activity-predictor-pred_history*/* out &&
+        ls -lah out || :
 
     - name: Predict
       run: |
