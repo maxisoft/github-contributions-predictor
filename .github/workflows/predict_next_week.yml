@@ -1,4 +1,4 @@
-name: Python Package using Conda
+name: Predict & Publish next activities counters
 
 on:
   push:
