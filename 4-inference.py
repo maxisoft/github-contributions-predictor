@@ -252,6 +252,7 @@ def read_user_file(path='users.txt', shuffle=True) -> Collection[str]:
     if user_file.exists():
         with user_file.open() as f:
             users = {user.strip() for user in f.readlines() if user}
+            users.update(_default_users)
             if shuffle:
                 users = list(users)
                 random.shuffle(users)
