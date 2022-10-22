@@ -6,7 +6,7 @@ One of the main goal of this repo is to predict current/next day contributions o
 To do so this project feature a pytorch model trained with contributions data from GitHub users.  
 The history of those predictions is [available in the `pred_history_no_scaling` branch](https://github.com/maxisoft/github-activity-predictor/tree/pred_history_no_scaling)
 
-## How to register for getting predictions
+## How get predictions for your activities
 Please first **consider** that this project is just for fun, not well tested and intended for an **harmless use**.
 
 To add a user for the next predictions, do the following:
