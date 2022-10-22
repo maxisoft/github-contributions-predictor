@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: prepare pred_history branch
         run: |
-          git fetch --all
+          git fetch --all --depth=1 --no-tags
           git switch pred_history_${{ matrix.model }} || git switch --orphan pred_history_${{ matrix.model }}
           git branch --set-upstream-to=origin/pred_history_${{ matrix.model }} pred_history_${{ matrix.model }} && 
           git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history_${{ matrix.model }} || :
