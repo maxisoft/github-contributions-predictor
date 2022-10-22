@@ -784,3 +784,4 @@ cython_debug/
 /*.npz
 /userdata_report.html
 /users.json
+/.idea
