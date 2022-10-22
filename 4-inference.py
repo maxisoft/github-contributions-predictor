@@ -5,9 +5,10 @@ import importlib
 import json
 import logging
 import os
+import random
 import tempfile
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Collection
 
 import joblib
 import numpy as np
@@ -146,7 +147,7 @@ class GCModel(nn.Module):
             contribs_x, dim=3)
         acontribs_x = torch.abs(contribs_x)
         contribs_x = contribs_x * (
-                    acontribs_x > torch.quantile(acontribs_x, 0.1, dim=1, keepdim=True))  # mimic fft filters
+                acontribs_x > torch.quantile(acontribs_x, 0.1, dim=1, keepdim=True))  # mimic fft filters
         contribs_x = contribs_x * (acontribs_x > torch.quantile(acontribs_x, 0.1, dim=2, keepdim=True))  # on both axis
         contribs_x = torch.fft.ifft2(contribs_x, dim=(1, 2), norm='ortho')
         hidden = self.hidden(contribs_x.real.permute(0, 2, 1)).permute(0, 2, 1)
@@ -177,6 +178,7 @@ def sanitize_path(path: str) -> str:
         stable = tmp == res
         res = tmp
     return res
+
 
 async def amain(users=_default_users):
     original_path = Path().resolve()
@@ -224,7 +226,9 @@ async def amain(users=_default_users):
         os.chdir(original_path)
         out_path = (original_path / "out")
         out_path.mkdir(exist_ok=True)
-        date_array = pd.to_datetime([now.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=i) for i in range(contribs.size(-1))])
+        date_array = pd.to_datetime(
+            [now.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=i) for i in
+             range(contribs.size(-1))])
         for i, user_hash in enumerate(contributions.keys()):
             csv_path = out_path / (sanitize_path(user_data[user_hash].user) + '.csv')
             if csv_path.exists():
@@ -233,18 +237,32 @@ async def amain(users=_default_users):
                 df = pd.DataFrame(columns=['date', 'contrib_count'])
                 df.set_index('date', inplace=True)
 
-            new_df = pd.DataFrame(np.round(contribs[i, :, :].numpy().transpose()), index=date_array, columns=['contrib_count'])
+            new_df = pd.DataFrame(np.round(contribs[i, :, :].numpy().transpose()), index=date_array,
+                                  columns=['contrib_count'])
             df = df.append(new_df)
-            df = df[~df.index.duplicated(keep='last')] # remove duplicate if any
+            df = df[~df.index.duplicated(keep='last')]  # remove duplicate if any
             df.sort_index(inplace=True)
 
             df.to_csv(csv_path, index_label='date')
         await asyncio.sleep(1)
 
 
+def read_user_file(path='users.txt', shuffle=True) -> Collection[str]:
+    user_file = Path(path)
+    if user_file.exists():
+        with user_file.open() as f:
+            users = {user.strip() for user in f.readlines() if user}
+            if shuffle:
+                users = list(users)
+                random.shuffle(users)
+    else:
+        users = _default_users
+    return users
+
+
 if __name__ == '__main__':
     try:
-        asyncio.run(amain())
+        asyncio.run(amain(read_user_file()))
     except:
         logger.error("", exc_info=True)
         raise
