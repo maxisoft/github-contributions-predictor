@@ -15,8 +15,8 @@ A toy project to see how predictable I'm in my so called GitHub contributions ;)
 - any additional pip requirements are listed in `requirements.txt`
 
 
-## source files description
-To allow one to build his own model the project is designed in multiple ordered python/jupyter files designed to be ran sequentially.
+## Source files description
+To allow one to build his own model the project is organized in multiple ordered python/jupyter files designed to be ran sequentially.
 
 ### 0-gather_data.py
 Download and save users' contributions and other stats provided by github public api.  
