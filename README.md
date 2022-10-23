@@ -2,7 +2,7 @@ GitHub's contributions Predictor
 -----------------
 A toy project to see how predictable I'm with my so-called GitHub contributions ;)
 
-One of the main goal of this repo is to predict current/next day contributions of multiples users in a daily automated way using GitHub actions.  
+One of the main goal of this repo is to predict current/next day [contributions](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/managing-contribution-settings-on-your-profile/why-are-my-contributions-not-showing-up-on-my-profile) of multiples users in a daily automated way using GitHub actions.  
 To do so this project feature a pytorch model trained with contributions data from GitHub users.  
 The history of those predictions is [available in the `pred_history_no_scaling` branch](https://github.com/maxisoft/github-contributions-predictor/tree/pred_history_no_scaling)
 
@@ -34,9 +34,9 @@ Here's an overview of the process to predict contributions from zero:
 To allow one to build his own model the project is organized in multiple ordered python/jupyter files designed to be ran sequentially.
 
 ### 0-gather_data.py
-Download and save users' contributions and other stats provided by github public api.  
+Download and save users' contributions and other stats provided by GitHub public api.  
 User list is collected by randomly walking the users' *following*/*followers* graph.  
-Produce a big `contribs.json` files containing raw users data.  
+Produce a big `contribs.json` files containing raw users' data.  
 This script can be run again to gather even more data.
 
 ### 1-pack-data.py
@@ -52,10 +52,10 @@ Pre-process users' contributions by using the following scheme:
 Produce a compressed `ml.npz` numpy file and a `scalers.pkl.z` containing pickled scalers.
 
 ### 3-train-model.ipynb
-Jupyter notebook (designed to be ran on kaggle) for training a pytorch model.
+Jupyter notebook (designed to be run on kaggle) for training a pytorch model.
 
 ### 4-inference.py
-Use previous pytorch model, download latest users' data and predict their contributions number for the next 7 days.  
+Use previous pytorch model, download the latest users' data and predict their contributions number for the next 7 days.  
 Produce `csv` files containing predictions.
 
 
