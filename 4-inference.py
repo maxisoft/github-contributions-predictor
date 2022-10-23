@@ -222,7 +222,7 @@ async def amain(users=_default_users):
 
         with torch.no_grad():
             result = model(torch.tensor([day])[None, :].expand(len(users), -1), torch.from_numpy(users),
-                           torch.from_numpy(weeks[:, -64:]))
+                           torch.from_numpy(weeks[:, -seq_size:]))
             am = result[:, :, :, 1].argmax(1, keepdims=True)
             contribs = torch.gather(result[:, :, :, 0], 1, am)
             print(contribs.numpy())
