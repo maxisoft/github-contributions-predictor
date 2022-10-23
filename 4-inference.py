@@ -210,9 +210,13 @@ async def amain(users=_default_users):
         weekday = now.weekday()
         weeks = weeks[:, :-1]
 
-        day = abs((weekday + 1) % 7)
+        seq_size = 64
+        day = (weekday + 1) % 7  # shift day because 0 mean sunday for GitHub
+        day -= seq_size
+        while not (0 <= day < 7):
+            day = (day + 7) % 7
 
-        model = GCModel(64, users.shape[-1])
+        model = GCModel(seq_size, users.shape[-1])
         model.load_state_dict(torch.load(original_path / 'model.pth', 'cpu'))
         model.eval()
 
