@@ -22,8 +22,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Download required ml files
       run: |
-        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
-        wget https://github.com/maxisoft/github-activity-predictor/releases/download/v0.1.0/scalers.pkl.z -O scalers.pkl.z
+        wget https://github.com/maxisoft/github-contributions-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
+        wget https://github.com/maxisoft/github-contributions-predictor/releases/download/v0.1.0/scalers.pkl.z -O scalers.pkl.z
     - name: Add conda to system path
       run: |
         # $CONDA is an environment variable pointing to the root of the miniconda directory
@@ -48,11 +48,11 @@ jobs:
 
     - name: Download previous predictions
       run: |
-        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history_${{ matrix.model }}.zip -O /tmp/pred_history.zip ||
-        wget https://github.com/maxisoft/github-activity-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
+        wget https://github.com/maxisoft/github-contributions-predictor/archive/refs/heads/pred_history_${{ matrix.model }}.zip -O /tmp/pred_history.zip ||
+        wget https://github.com/maxisoft/github-contributions-predictor/archive/refs/heads/pred_history.zip -O /tmp/pred_history.zip &&
         unzip /tmp/pred_history.zip -d /tmp &&
         mkdir -p out &&
-        cp --archive /tmp/github-activity-predictor-pred_history*/* out &&
+        cp --archive /tmp/github-contributions-predictor-pred_history*/* out &&
         ls -lah out || :
 
     - name: Predict

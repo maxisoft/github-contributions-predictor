@@ -1,25 +1,27 @@
-Github Activity Predictor
+GitHub's contributions Predictor
 -----------------
 A toy project to see how predictable I'm with my so-called GitHub contributions ;)
 
 One of the main goal of this repo is to predict current/next day contributions of multiples users in a daily automated way using GitHub actions.  
 To do so this project feature a pytorch model trained with contributions data from GitHub users.  
-The history of those predictions is [available in the `pred_history_no_scaling` branch](https://github.com/maxisoft/github-activity-predictor/tree/pred_history_no_scaling)
+The history of those predictions is [available in the `pred_history_no_scaling` branch](https://github.com/maxisoft/github-contributions-predictor/tree/pred_history_no_scaling)
 
-## How get predictions for your activities
+## How get predictions for your contributions
 Please first **consider** that this project is just for fun, not well tested and intended for an **harmless use**.
 
 To add a user for the next predictions, do the following:
-- [fork this repository](https://github.com/maxisoft/github-activity-predictor/fork)
+- [fork this repository](https://github.com/maxisoft/github-contributions-predictor/fork)
 - append your GitHub nickname into the `users.txt` file
 - commit
 - open a pull request
 
 ## Technical Process Overview
 The following readme parts are now more technical.   
+
+Here's an overview of the process to predict contributions from zero:
 1. Gather contributions data
 2. Train a machine learning model
-3. Use the model to predict futures contributions ([published here](https://github.com/maxisoft/github-activity-predictor/tree/pred_history_no_scaling))
+3. Use the model to predict futures contributions ([published here](https://github.com/maxisoft/github-contributions-predictor/tree/pred_history_no_scaling))
 4. Repeat `3.` every day by using GitHub actions
 
 ## Requirements to rebuild a model
@@ -58,4 +60,4 @@ Produce `csv` files containing predictions.
 
 
 ## Bonus for the readers
-There's [an additional branch `pred_history_with_scaling`](https://github.com/maxisoft/github-activity-predictor/tree/pred_history_with_scaling) containing predictions with a model trained to expect more activities from users.
+There's [an additional branch `pred_history_with_scaling`](https://github.com/maxisoft/github-contributions-predictor/tree/pred_history_with_scaling) containing predictions with a model trained to expect more contributions from users.
