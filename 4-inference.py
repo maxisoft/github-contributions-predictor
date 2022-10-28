@@ -65,44 +65,83 @@ class SwitchableNorm1d(nn.Module):
 
 
 class GCModel(nn.Module):
-    def __init__(self, seq_size: int, user_features: int):
+    def __init__(self, seq_size: int):
         super().__init__()
-        hidden_size = 256
+        hidden_size = 128
 
-        self.contrib_w = nn.Parameter(torch.empty((seq_size, user_features, 8), dtype=torch.cfloat))
+        self.contrib_w = nn.Parameter(torch.empty((seq_size, hidden_size), dtype=torch.cfloat))
         torch.nn.init.kaiming_normal_(self.contrib_w)
 
-        self.contrib_b = nn.Parameter(torch.empty((7, seq_size, user_features, 8), dtype=torch.cfloat))
+        self.contrib_w2 = nn.Parameter(torch.randn((1, hidden_size), dtype=torch.cfloat).tanh() * 7)
+
+        self.contrib_b = nn.Parameter(torch.empty((7, seq_size, hidden_size), dtype=torch.cfloat))
         torch.nn.init.xavier_uniform_(self.contrib_b, 0.5)
 
-        self.contrib_alpha = nn.Parameter(torch.empty((1, 1, user_features), dtype=torch.cfloat))
+        self.contrib_alpha = nn.Parameter(torch.empty((1, hidden_size), dtype=torch.cfloat))
         torch.nn.init.kaiming_normal_(self.contrib_alpha)
 
-        self.hidden_alpha = nn.Parameter(torch.empty((7, user_features), dtype=torch.cfloat))
+        self.hidden_alpha = nn.Parameter(torch.empty((7, hidden_size), dtype=torch.cfloat))
         torch.nn.init.kaiming_normal_(self.hidden_alpha)
 
-        self.user_bn = SwitchableNorm1d(user_features, momentum=0.01)
+        self.contrib_stats_bn = nn.LazyBatchNorm1d(momentum=0.01)
+        self.contrib_stats_w = nn.Parameter(torch.ones((seq_size, 1), dtype=torch.cfloat))
+        self.contrib_stats_b = nn.Parameter(torch.zeros((seq_size, hidden_size), dtype=torch.cfloat))
+
+        self.contrib_stats_expand = nn.Sequential(
+            nn.LazyLinear(hidden_size),
+            nn.Tanh(),
+            SwitchableNorm1d(hidden_size, momentum=0.01),
+        )
 
         self.hidden = nn.Sequential(
-            nn.Conv1d(user_features, hidden_size, 1),
+            nn.Conv1d(hidden_size, hidden_size, 1),
             nn.Mish(inplace=True),
             nn.Conv1d(hidden_size, hidden_size, 7, 7),
             SwitchableNorm1d(hidden_size, seq_size // 7, (hidden_size, 1)),
             nn.Mish(inplace=True),
-            nn.Conv1d(hidden_size, user_features, 3)
+            nn.Conv1d(hidden_size, hidden_size, 3)
         )
 
         self.final = nn.Sequential(
-            SwitchableNorm1d(7 * user_features, momentum=0.01),
-            nn.Linear(7 * user_features, hidden_size),
+            SwitchableNorm1d(7 * hidden_size, momentum=0.01),
+            nn.Linear(7 * hidden_size, hidden_size),
             nn.Mish(inplace=True),
             nn.Dropout(0.1),
             nn.Linear(hidden_size, 7 * 6 * 2, bias=True)
         )
 
+    def contrib_stats(self, contribs: Tensor):
+        contribs_std, contribs_mean = torch.std_mean(contribs, dim=1, keepdim=True)
+        contribs_weeks = contribs[:, -int(contribs.size(1) // 7) * 7:].view(contribs.size(0), -1, 7)
+        contribs_weeks_std, contribs_weeks_mean = torch.std_mean(contribs_weeks, dim=1)
+
+        contribs_fft = torch.fft.rfft(contribs, dim=1)
+        _, top_indices = torch.topk(torch.abs(contribs_fft), 7, dim=1)
+        top_fft = torch.gather(contribs_fft, 1, top_indices)
+
+        quantiles = torch.quantile(contribs, torch.tensor([0.1, 0.25, 0.5, 0.75, 0.90], device=contribs.device), dim=1)
+
+        return torch.cat((
+            contribs_mean,
+            contribs_std,
+            contribs_weeks_std,
+            contribs_weeks_mean,
+            top_indices,
+            top_fft.real,
+            top_fft.imag,
+            quantiles.t()
+        ), dim=1)
+
     def forward(self, day: Tensor, users: Tensor, contribs: Tensor):
-        contrib_b = self.contrib_b[None, :, :, :, :].expand(day.size(0), -1, -1, -1, -1)
-        contrib_b = torch.gather(contrib_b, 1, day[:, :, None, None, None].expand(-1, 1, *contrib_b.size()[2:]))
+        contrib_stats = self.contrib_stats(contribs)
+        contrib_stats = self.contrib_stats_bn(contrib_stats)
+
+        contrib_b = self.contrib_b[None, :, :, :].expand(day.size(0), -1, -1, -1)
+        if self.training:
+            day = (day + torch.normal(0.0, 7.0, day.size(), device=day.device).abs() * (
+                        torch.randint_like(day, 0, 3, device=day.device) == 0).float()).to(dtype=day.dtype)
+            day = ((day + 7) % 7).to(dtype=day.dtype)
+        contrib_b = torch.gather(contrib_b, 1, day[:, :, None, None].expand(-1, 1, *contrib_b.size()[2:]))
 
         if self.training:
             contrib_mask = torch.rand_like(contribs) > torch.randint(0, 5, (contribs.size(0), 1),
@@ -129,26 +168,17 @@ class GCModel(nn.Module):
                 contribs + (noise - contribs_mean) * torch.randint_like(noise, 0, 5).float() / 100
             )
             contribs = contribs * contrib_mask
-            contribs = contribs.relu()
 
-        contribs_x = torch.fft.fft(contribs[:, :, None, None], dim=1,
-                                   norm='ortho') * self.contrib_w + contrib_b.squeeze_(1)
-
-        users = self.user_bn(users)
-        if self.training:
-            users_std = torch.std(users, dim=0, keepdim=True).expand_as(users)
-            noise = torch.normal(0, users_std).to(device=users.device)
-            users = users + noise.detach() * torch.randint_like(noise, 0, 5) / 100
-        contribs_x = torch.fft.fft(users, dim=1, norm='ortho')[:, None, :, None].expand_as(contribs_x) * torch.fft.fft(
-            contribs_x, dim=3)
-        contribs_x = torch.fft.ifft(contribs_x, dim=3)
-        contrib_alpha = torch.sigmoid(self.contrib_alpha)
-        contribs_x = contrib_alpha * torch.amax(torch.abs(contribs_x), dim=3) + (1 - contrib_alpha) * torch.mean(
-            contribs_x, dim=3)
+        contribs_x = torch.fft.fft(contribs[:, :, None], dim=1, norm='ortho')
+        contribs_x = contribs_x * self.contrib_w + contrib_b.squeeze_(1)
+        contrib_stats = torch.fft.fft(self.contrib_stats_expand(contrib_stats), norm='ortho')[:, None, :]
+        contrib_stats = contrib_stats.expand_as(contribs_x) * self.contrib_stats_w + self.contrib_stats_b
         acontribs_x = torch.abs(contribs_x)
         contribs_x = contribs_x * (
-                acontribs_x > torch.quantile(acontribs_x, 0.1, dim=1, keepdim=True))  # mimic fft filters
+                    acontribs_x > torch.quantile(acontribs_x, 0.1, dim=1, keepdim=True))  # mimic fft filters
         contribs_x = contribs_x * (acontribs_x > torch.quantile(acontribs_x, 0.1, dim=2, keepdim=True))  # on both axis
+        contribs_x = torch.fft.fft(contribs_x, dim=2, norm='ortho') * self.contrib_w2 + contribs_x.tanh()
+        contribs_x = contribs_x * contrib_stats
         contribs_x = torch.fft.ifft2(contribs_x, dim=(1, 2), norm='ortho')
         hidden = self.hidden(contribs_x.real.permute(0, 2, 1)).permute(0, 2, 1)
         hidden_alpha = self.hidden_alpha.tanh()
@@ -156,6 +186,8 @@ class GCModel(nn.Module):
                   torch.fft.fft(contribs_x[:, -hidden.size(1):, :], dim=1) * (1 - hidden_alpha))
         ahidden = torch.abs(hidden)
         hidden = hidden * (ahidden > torch.quantile(ahidden, 0.3, dim=2, keepdim=True))
+        hidden_alpha = self.hidden_alpha.sigmoid()
+        hidden = hidden_alpha * hidden + (1 - hidden_alpha) * contrib_stats[:, :hidden.size(1), :]
         hidden = torch.fft.ifft(hidden, dim=1)
         res = self.final(hidden.real.reshape(hidden.size(0), -1)).view(hidden.size(0), 6, 7, 2)
         return res
@@ -216,7 +248,7 @@ async def amain(users=_default_users):
         while not (0 <= day < 7):
             day = (day + 7) % 7
 
-        model = GCModel(seq_size, users.shape[-1])
+        model = GCModel(seq_size)
         model.load_state_dict(torch.load(original_path / 'model.pth', 'cpu'))
         model.eval()
 
