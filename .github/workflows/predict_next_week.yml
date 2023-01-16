@@ -28,14 +28,21 @@ jobs:
       run: |
         wget https://github.com/maxisoft/github-contributions-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
         wget https://github.com/maxisoft/github-contributions-predictor/releases/download/v0.1.0/scalers.pkl.z -O scalers.pkl.z
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
+    #- name: Add conda to system path
+    #  run: |
+    #    # $CONDA is an environment variable pointing to the root of the miniconda directory
+    #    echo $CONDA/bin >> $GITHUB_PATH
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-activate-base: true
-        activate-environment: ""
+        auto-update-conda: true
+        channel-priority: flexible
+        python-version: 3.9
+    - run: |
+          conda install python=3.9
+          conda info
+          conda list
+          conda config --show-sources
+          conda config --show
     - name: Install dependencies
       run: |
         conda install pip
