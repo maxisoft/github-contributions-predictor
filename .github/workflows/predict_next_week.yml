@@ -12,6 +12,7 @@ permissions: read-all
 
 concurrency:
   group: Predict-${{ github.ref == 'refs/heads/main' }}
+  
 
 jobs:
   predict:
