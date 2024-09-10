@@ -45,12 +45,14 @@ jobs:
           conda list
           conda config --show-sources
           conda config --show
+
     - name: Install dependencies
       run: |
         conda install pip
-        conda install pytorch cpuonly -c pytorch
-        conda install numpy pandas scipy scikit-learn tqdm
         conda install --file requirements.txt
+        conda install pytorch cpuonly -c pytorch
+        #conda install numpy pandas scipy scikit-learn tqdm
+
     - name: Lint with flake8
       run: |
         conda install flake8
