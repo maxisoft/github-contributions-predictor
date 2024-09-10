@@ -2,11 +2,13 @@ name: Predict & Publish next activities counters
 
 on:
   push:
-    branch:
+    branches:
       - main
       - dev
   schedule:
     - cron: '0 */2 * * *'
+
+  workflow_dispatch:
 
 permissions: read-all
 
