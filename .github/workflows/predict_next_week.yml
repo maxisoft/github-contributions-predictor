@@ -74,7 +74,7 @@ jobs:
       run: |
         conda run python 4-inference.py
       env:
-        GITHUB_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
         GITHUB_ACTOR: ${{ github.repository_owner }}
 
     - uses: actions/upload-artifact@v3
