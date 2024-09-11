@@ -25,7 +25,7 @@ jobs:
         model: [no_scaling, with_scaling]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download required ml files
       run: |
         wget https://github.com/maxisoft/github-contributions-predictor/releases/download/v0.1.0/model_${{ matrix.model }}.pth -O model.pth
@@ -94,7 +94,7 @@ jobs:
         model: [ no_scaling, with_scaling ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: prepare pred_history branch
         run: |
           git fetch --all --depth=1 --no-tags
