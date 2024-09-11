@@ -102,7 +102,7 @@ jobs:
           git branch --set-upstream-to=origin/pred_history_${{ matrix.model }} pred_history_${{ matrix.model }} && 
           git pull --no-ff --stat --allow-unrelated-histories || git reset --hard origin/pred_history_${{ matrix.model }} || :
       - name: download preds artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: preds_${{ matrix.model }}
 
